@@ -1,78 +1,54 @@
-from connect import get_connection
+import psycopg2
+from config import params
 
-def search(pattern):
-    conn = get_connection()
-    cur = conn.cursor()
+def run_practice():
+    conn = None
+    try:
+        # Подключаемся к базе
+        conn = psycopg2.connect(**params)
+        cur = conn.cursor()
 
-    cur.execute("SELECT * FROM search_pattern(%s)", (pattern,))
-    rows = cur.fetchall()
+        print("--- 1. Добавляем/Обновляем пользователя (Upsert) ---")
+        cur.execute("CALL upsert_user(%s, %s);", ('Mickey', '87071112233'))
+        
+        print("--- 2. Поиск по паттерну 'Mick' ---")
+        cur.execute("SELECT * FROM get_records_by_pattern(%s);", ('Mick',))
+        print("Найдено:", cur.fetchall())
 
-    for row in rows:
-        print(row)
+        print("--- 3. Массовая вставка с валидацией ---")
+        names = ['Alice', 'Bob', 'Shorty']
+        phones = ['87019998877', '87025554433', '123'] # '123' слишком короткий
+        cur.execute("SELECT * FROM bulk_insert_users(%s, %s);", (names, phones))
+        errors = cur.fetchall()
+        if errors:
+            print("Ошибки валидации (не вставлены):", errors)
 
-    cur.close()
-    conn.close()
+        print("--- 4. Пагинация (страница 1, лимит 2) ---")
+        cur.execute("SELECT * FROM get_users_paginated(%s, %s);", (2, 0))
+        print("Записи:", cur.fetchall())
 
+        print("--- 5. Удаление пользователя 'Bob' ---")
+        cur.execute("CALL delete_user(%s);", ('Bob',))
+        
+        # Сохраняем изменения
+        conn.commit()
+        print("\nВсе задачи выполнены успешно!")
 
-def insert_or_update(name, phone):
-    conn = get_connection()
-    cur = conn.cursor()
+        cur.close()
+    except Exception as e:
+        print("Ошибка:", e)
+    finally:
+        if conn:
+            conn.close()
 
-    cur.execute("CALL insert_or_update_user(%s, %s)", (name, phone))
-
-    conn.commit()
-    cur.close()
-    conn.close()
-
-
-def delete_user(value):
-    conn = get_connection()
-    cur = conn.cursor()
-
-    cur.execute("CALL delete_user(%s)", (value,))
-
-    conn.commit()
-    cur.close()
-    conn.close()
-
-
-def paginate(limit, offset):
-    conn = get_connection()
-    cur = conn.cursor()
-
-    cur.execute("SELECT * FROM get_paginated(%s, %s)", (limit, offset))
-    rows = cur.fetchall()
-
-    for row in rows:
-        print(row)
-
-    cur.close()
-    conn.close()
-
-
-# 🔹 ТЕСТ (можешь менять)
 if __name__ == "__main__":
-    print("1 - Search")
-    print("2 - Insert/Update")
-    print("3 - Delete")
-    print("4 - Pagination")
+    run_practice()
 
-    choice = input("Choose: ")
 
-    if choice == "1":
-        pattern = input("Enter search: ")
-        search(pattern)
 
-    elif choice == "2":
-        name = input("Name: ")
-        phone = input("Phone: ")
-        insert_or_update(name, phone)
 
-    elif choice == "3":
-        value = input("Enter name or phone: ")
-        delete_user(value)
-
-    elif choice == "4":
-        limit = int(input("Limit: "))
-        offset = int(input("Offset: "))
-        paginate(limit, offset)
+CALL upsert_user('Arman', '87071112233');
+CALL upsert_user('Madina', '87475556677');
+CALL upsert_user('Karina', '87010009988');
+CALL upsert_user('Batyr', '87072331456');
+CALL upsert_user('Karim', '87052254923');
