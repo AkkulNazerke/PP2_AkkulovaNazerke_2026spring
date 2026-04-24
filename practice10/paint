@@ -1,0 +1,92 @@
+import pygame
+
+pygame.init()
+screen = pygame.display.set_mode((800, 600))
+pygame.display.set_caption("Paint: Rect, Circle, Eraser & Brush Size")
+
+# Цвета
+BLACK = (0, 0, 0)
+WHITE = (255, 255, 255)
+RED   = (255, 0, 0)
+GREEN = (0, 255, 0)
+BLUE  = (0, 0, 255)
+LIGHTPINK = (255, 182, 193)
+DARKKHAKI = (189, 183, 107)
+PLUM = (221, 160, 221)
+MEDIUMAQUAMARINE = (102, 205, 170)
+
+# Состояния
+draw_color = RED
+mode = 'brush'
+brush_size = 5 # Твоя новая переменная для толщины
+start_pos = None
+clock = pygame.time.Clock()
+
+canvas = pygame.Surface((800, 600))
+canvas.fill(WHITE)
+
+running = True
+while running:
+    screen.fill(WHITE)
+    screen.blit(canvas, (0, 0))
+    
+    # Текст с текущими настройками
+    font = pygame.font.SysFont("Arial", 18)
+    msg = f"Mode: {mode.upper()} | Size: {brush_size} | [+/-] Change Size | [1-LIGHTPINK ,2-DARKKHAKI, 3-PLUM, 4-MEDIUMAQUAMARINE, 5-GREEN] Colors"
+    text = font.render(msg, True, BLACK)
+    screen.blit(text, (10, 10))
+
+    
+
+    for event in pygame.event.get():
+        if event.type == pygame.QUIT:
+            running = False
+        
+        if event.type == pygame.KEYDOWN:
+            # Изменение толщины кисти
+            if event.key == pygame.K_EQUALS or event.key == pygame.K_KP_PLUS:
+                brush_size += 2
+            if event.key == pygame.K_MINUS or event.key == pygame.K_KP_MINUS:
+                brush_size = max(2, brush_size - 2)
+
+            # Выбор цвета и режима
+            if event.key == pygame.K_1: draw_color = LIGHTPINK
+            if event.key == pygame.K_2: draw_color = DARKKHAKI
+            if event.key == pygame.K_3: draw_color = PLUM
+            if event.key == pygame.K_4: draw_color = MEDIUMAQUAMARINE
+            if event.key == pygame.K_5: draw_color = GREEN
+            if event.key == pygame.K_b: mode = 'brush'
+            if event.key == pygame.K_r: mode = 'rect'
+            if event.key == pygame.K_c: mode = 'circle'
+            if event.key == pygame.K_e: mode = 'eraser'
+
+        if event.type == pygame.MOUSEBUTTONDOWN:
+            if mode in ['rect', 'circle']:
+                start_pos = event.pos
+            
+        if event.type == pygame.MOUSEBUTTONUP:
+            if mode == 'rect' and start_pos:
+                end_pos = event.pos
+                width = end_pos[0] - start_pos[0]
+                height = end_pos[1] - start_pos[1]
+                # Используем brush_size для толщины контура фигуры
+                pygame.draw.rect(canvas, draw_color, (start_pos[0], start_pos[1], width, height), brush_size)
+                start_pos = None
+            if mode == 'circle' and start_pos:
+                end_pos = event.pos
+                radius = int(((end_pos[0] - start_pos[0])**2 + (end_pos[1] - start_pos[1])**2)**0.5)
+                pygame.draw.circle(canvas, draw_color, start_pos, radius, brush_size)
+                start_pos = None
+
+    # Рисование кистью
+    if pygame.mouse.get_pressed()[0]:
+        mouse_pos = pygame.mouse.get_pos()
+        if mode == 'brush':
+            pygame.draw.circle(canvas, draw_color, mouse_pos, brush_size)
+        elif mode == 'eraser':
+            pygame.draw.circle(canvas, WHITE, mouse_pos, brush_size * 2) # Ластик чуть больше кисти
+
+    pygame.display.flip()
+    clock.tick(60)
+
+pygame.quit()
